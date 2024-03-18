@@ -1,0 +1,92 @@
+# views.py
+from django.shortcuts import render
+import speech_recognition as sr
+from googletrans import Translator
+from gtts import gTTS
+import base64
+
+def translate(request):
+    translated_audio_base64 = None
+    
+    if request.method == 'POST':
+        speech_text = request.POST.get('speech_text', '')  # Extract speech text from the POST request
+
+        # Translate text
+        translator = Translator()
+        translated_text = translator.translate(speech_text, src='en', dest='hi').text
+        
+        # Convert translated text to speech
+        translated_audio = gTTS(translated_text, lang='hi')
+        translated_audio.save('translated_audio.mp3')
+
+        # Encode the translated audio file into base64 format
+        with open('translated_audio.mp3', 'rb') as f:
+            encoded_audio = base64.b64encode(f.read()).decode('utf-8')
+            translated_audio_base64 = f"data:audio/mpeg;base64,{encoded_audio}"
+    
+    return render(request, 'home.html', {'translated_audio_base64': translated_audio_base64})
+<!-- translate.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech Translator</title>
+</head>
+<body>
+    <button id="start_button">Speak</button>
+    <div id="output"></div>
+    <div id="translated_output"></div>
+
+    <form id="translation_form" method="post" style="display: none;">
+        {% csrf_token %}
+        <input type="hidden" id="speech_text" name="speech_text">
+        
+        <button type="submit">Translate</button>
+        <input type="hidden" id="converted_text" name="converted_text">
+    </form>
+
+    {% if translated_audio_base64 %}
+        <audio controls>
+            <source src="{{ translated_audio_base64 }}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    {% endif %}
+
+    <script>
+        const startButton = document.getElementById('start_button');
+        const outputDiv = document.getElementById('output');
+        const translatedOutputDiv = document.getElementById('translated_output');
+        const form = document.getElementById('translation_form');
+        const speechText = document.getElementById('speech_text');
+        const convertedText = document.getElementById('converted_text');
+
+        const recognition = new webkitSpeechRecognition(); // for Chrome
+        // const recognition = new SpeechRecognition(); // for modern browsers
+
+        recognition.lang = 'en-US';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            outputDiv.innerHTML = transcript;
+            speechText.value = transcript;
+            form.style.display = 'block';
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+        };
+
+        startButton.addEventListener('click', () => {
+            recognition.start();
+            outputDiv.innerHTML = 'Listening...';
+        });
+
+        // Function to display translated text
+        function displayTranslatedText(translatedText) {
+            translatedOutputDiv.innerHTML = translatedText;
+            convertedText.value = translatedText; // Set the value of the converted text input field
+        }
+    </script>
+</body>
+</html>

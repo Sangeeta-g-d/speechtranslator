@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech Translator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        #output, #translated_output {
+            margin-bottom: 20px;
+        }
+
+        #start_button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #start_button:hover {
+            background-color: #0056b3;
+        }
+
+        button[type="submit"] {
+            background-color: #28a745;
+            color: #fff;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #218838;
+        }
+
+        audio {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+    <label for="source_language">Select Source Language:</label>
+    <select id="source_language">
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="bn">Bengali</option>
+        <option value="de">German </option>
+        <option value="ar">Arabic</option>
+        <option value="fr">French</option>
+        <!-- Add more language options as needed -->
+    </select>
+
+    <label for="destination_language">Select Destination Language:</label>
+    <select id="destination_language">
+        <option value="hi">Hindi</option>
+        <option value="en">English</option>
+        <option value="bn">Bengali</option>
+        <option value="de">German </option>
+        <option value="ar">Arabic</option>
+        <option value="fr">French</option>
+        <!-- Add more language options as needed -->
+    </select>
+
+    <button id="start_button">Speak</button>
+    <div id="output"></div>
+    <div id="translated_output"></div>
+
+    <form id="translation_form" method="post" style="display: none;">
+        {% csrf_token %}
+        <input type="hidden" id="speech_text" name="speech_text">
+        <input type="hidden" id="source_lang" name="source_lang">
+        <input type="hidden" id="destination_lang" name="destination_lang">
+        
+        <button type="submit">Translate</button>
+        <input type="hidden" id="converted_text" name="converted_text">
+    </form>
+
+    {% if translated_audio_base64 %}
+        <audio controls>
+            <source src="{{ translated_audio_base64 }}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    {% endif %}
+    </div>
+    <script>
+        const startButton = document.getElementById('start_button');
+        const outputDiv = document.getElementById('output');
+        const translatedOutputDiv = document.getElementById('translated_output');
+        const form = document.getElementById('translation_form');
+        const speechText = document.getElementById('speech_text');
+        const sourceLang = document.getElementById('source_lang');
+        const destinationLang = document.getElementById('destination_lang');
+        const convertedText = document.getElementById('converted_text');
+        const sourceLanguageSelect = document.getElementById('source_language');
+        const destinationLanguageSelect = document.getElementById('destination_language');
+
+        const recognition = new webkitSpeechRecognition(); // for Chrome
+        // const recognition = new SpeechRecognition(); // for modern browsers
+
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            outputDiv.innerHTML = transcript;
+            speechText.value = transcript;
+            form.style.display = 'block';
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+        };
+
+        startButton.addEventListener('click', () => {
+            recognition.lang = sourceLanguageSelect.value;
+            sourceLang.value = sourceLanguageSelect.value;
+            destinationLang.value = destinationLanguageSelect.value;
+            recognition.start();
+            outputDiv.innerHTML = 'Listening...';
+        });
+
+        // Function to display translated text
+        function displayTranslatedText(translatedText) {
+            translatedOutputDiv.innerHTML = translatedText;
+            convertedText.value = translatedText; // Set the value of the converted text input field
+        }
+    </script>
+</body>
+</html>
